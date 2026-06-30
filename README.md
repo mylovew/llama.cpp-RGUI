@@ -2,7 +2,10 @@
 
 > llama.cpp 启动客户端 GUI —— 用桌面图形界面可视化地启动和管理 [llama.cpp](https://github.com/ggml-org/llama.cpp) 的 `llama-server` 服务。
 
-![screenshot](docs/screenshot.png)
+![launch](docs/screenshots/screenshot-launch.png)
+![models](docs/screenshots/screenshot-models.png)
+![presets](docs/screenshots/screenshot-presets.png)
+![server](docs/screenshots/screenshot-server.png)
 
 ---
 
