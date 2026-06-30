@@ -51,8 +51,15 @@ pub async fn pick_folder(app: AppHandle) -> Option<String> {
 /// 检测 llama-server 版本
 #[tauri::command]
 pub async fn detect_server_version(server_path: String) -> AppResult<String> {
-    let output = tokio::process::Command::new(&server_path)
-        .arg("--version")
+    let mut cmd = tokio::process::Command::new(&server_path);
+    cmd.arg("--version");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let output = cmd
         .output()
         .await
         .map_err(|e| AppError::Process(format!("无法执行 {}: {}", server_path, e)))?;

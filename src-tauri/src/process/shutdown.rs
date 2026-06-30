@@ -47,10 +47,12 @@ async fn stop_windows(child: &mut Child) {
     // 注意：llama-server 可能有自己的子进程，但 kill 会终止整个进程树
     if let Some(pid) = child.id() {
         // 尝试用 taskkill /T 终止整个进程树
-        let _ = tokio::process::Command::new("taskkill")
-            .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .output()
-            .await;
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        let mut cmd = tokio::process::Command::new("taskkill");
+        cmd.args(["/PID", &pid.to_string(), "/T", "/F"]);
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        let _ = cmd.output().await;
     }
     // 确保子进程已终止
     let _ = child.wait().await;
