@@ -41,7 +41,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Threading"] }
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.29", features = ["process", "signal"] }
+nix = { version = "0.31", features = ["process", "signal"] }
 
 [features]
 # 默认启用自定义协议
