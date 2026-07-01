@@ -1,8 +1,18 @@
 use std::time::{Duration, Instant};
 use tokio::net::TcpStream;
 
+/// 将仅能用于绑定的特殊地址映射为可用于连接的回环地址
+/// 例如 "0.0.0.0" / "::" → "127.0.0.1"
+pub fn normalize_connect_host(host: &str) -> &str {
+    match host {
+        "0.0.0.0" | "::" | "[::]" => "127.0.0.1",
+        _ => host,
+    }
+}
+
 /// 检测端口是否已被占用（能连上说明被占用）
 pub async fn is_port_in_use(host: &str, port: u16) -> bool {
+    let host = normalize_connect_host(host);
     let addr = format!("{}:{}", host, port);
     tokio::net::TcpStream::connect(&addr).await.is_ok()
 }
@@ -11,6 +21,7 @@ pub async fn is_port_in_use(host: &str, port: u16) -> bool {
 /// 先等 TCP 端口连通，再等 HTTP /health 返回 200
 /// 返回 true 表示就绪，false 表示超时
 pub async fn wait_for_ready(host: &str, port: u16, timeout_secs: u64) -> bool {
+    let host = normalize_connect_host(host);
     let addr = format!("{}:{}", host, port);
     let start = Instant::now();
     let timeout = Duration::from_secs(timeout_secs);

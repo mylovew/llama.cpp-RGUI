@@ -62,6 +62,9 @@ pub async fn start_server(
     let host = preset.host.clone();
     let port = preset.port;
 
+    // 标准化连接地址：0.0.0.0 / :: 等仅绑定地址应映射为 127.0.0.1，供前端和状态事件使用
+    let display_host = health::normalize_connect_host(&host).to_string();
+
     // 创建命令
     let mut cmd = Command::new(&server_path);
     cmd.args(&args);
@@ -111,7 +114,7 @@ pub async fn start_server(
         child,
         pid,
         port,
-        host: host.clone(),
+        host: display_host.clone(),
         model: model_path.clone(),
         started_at: ServerRuntime::now_ts(),
     };
@@ -139,7 +142,7 @@ pub async fn start_server(
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_else(|| "model".to_string())
         });
-    let chat_host = host.clone();
+    let chat_host = display_host.clone();
     let chat_port = port;
     tokio::spawn(async move {
         let ready = health::wait_for_ready(&chat_host, chat_port, 180).await;
