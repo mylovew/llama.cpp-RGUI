@@ -6,6 +6,11 @@ use crate::config::schema::Preset;
 use crate::error::{AppError, AppResult};
 use crate::gguf::{meta::*, parser, vram};
 
+/// 判断文件名是否属于视觉辅助模型文件（mmproj），不应列入主模型列表
+fn is_mmproj_file(name: &str) -> bool {
+    name.to_lowercase().contains("mmproj")
+}
+
 /// 判断目录/文件名是否与模型扫描无关。
 /// 用于 WalkDir::filter_entry 剪枝：返回 true 的条目会被跳过（不 yield、不递归），
 /// 避免误选宽目录（如整个磁盘）时扫描大量无关文件。根目录不受此影响。
@@ -52,6 +57,10 @@ pub async fn scan_models(folders: Vec<String>) -> Vec<ModelInfo> {
             if entry.file_type().is_file() {
                 if let Some(ext) = entry.path().extension() {
                     if ext.eq_ignore_ascii_case("gguf") {
+                        // 跳过视觉辅助模型文件，不列入主模型列表
+                        if is_mmproj_file(&entry.file_name().to_string_lossy()) {
+                            continue;
+                        }
                         gguf_files.push((entry.path().to_path_buf(), PathBuf::from(folder)));
                     }
                 }
@@ -125,4 +134,30 @@ pub async fn parse_gguf(path: String) -> AppResult<ModelMeta> {
 #[tauri::command]
 pub async fn estimate_vram(meta: ModelMeta, preset: Preset) -> VramEstimate {
     vram::estimate(&meta, &preset)
+}
+
+/// 在模型文件所在目录自动查找 mmproj（视觉辅助模型）文件
+/// 仅当恰好找到 1 个候选时返回，0 个或多于 1 个均返回 None
+pub fn find_mmproj_near_model(model_path: &str) -> Option<String> {
+    let dir = Path::new(model_path).parent()?;
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_lower = name.to_string_lossy().to_lowercase();
+            if name_lower.ends_with(".gguf") && name_lower.contains("mmproj") {
+                candidates.push(entry.path());
+            }
+        }
+    }
+    match candidates.len() {
+        1 => Some(candidates[0].to_string_lossy().to_string()),
+        _ => None,
+    }
+}
+
+/// 查找模型旁边的 mmproj 文件（Tauri command，供前端预览）
+#[tauri::command]
+pub fn find_mmproj(model_path: String) -> Option<String> {
+    find_mmproj_near_model(&model_path)
 }

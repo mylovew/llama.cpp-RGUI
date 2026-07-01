@@ -3,6 +3,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::process::Command;
 
 use crate::config::schema::Preset;
+use crate::commands::models::find_mmproj_near_model;
 use crate::error::{AppError, AppResult};
 use crate::process::health;
 use crate::process::log_pipe;
@@ -49,8 +50,15 @@ pub async fn start_server(
         return Err(AppError::PortInUse { port: preset.port });
     }
 
+    // 解析 mmproj 路径：preset 手动指定 > 自动检测 > 禁用
+    let mmproj_path = match &preset.mmproj_path {
+        Some(p) if !p.is_empty() => Some(p.clone()),
+        Some(_) => None,                                // 空串 = 显式禁用
+        None => find_mmproj_near_model(&model_path),   // None = 自动检测
+    };
+
     // 构建参数
-    let args = spawn_mod::build_args(&model_path, &preset);
+    let args = spawn_mod::build_args(&model_path, &preset, mmproj_path.as_deref());
     let host = preset.host.clone();
     let port = preset.port;
 

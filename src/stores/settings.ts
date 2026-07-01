@@ -25,6 +25,7 @@ export interface Preset {
   chat_template: string | null;
   custom_args: string[];
   extra_env: Record<string, string>;
+  mmproj_path: string | null;
 }
 
 export interface AppConfig {

@@ -84,6 +84,7 @@ pub fn run() {
             commands::models::scan_models,
             commands::models::parse_gguf,
             commands::models::estimate_vram,
+            commands::models::find_mmproj,
             // 进程管理
             commands::server::check_port,
             commands::server::start_server,

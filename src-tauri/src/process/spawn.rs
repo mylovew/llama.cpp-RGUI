@@ -1,7 +1,7 @@
 use crate::config::schema::{FlashAttnMode, GpuLayers, Preset, SplitMode};
 
 /// 根据预设构建 llama-server 命令行参数
-pub fn build_args(model_path: &str, preset: &Preset) -> Vec<String> {
+pub fn build_args(model_path: &str, preset: &Preset, mmproj_path: Option<&str>) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
 
     // 模型路径（必填）
@@ -138,6 +138,14 @@ pub fn build_args(model_path: &str, preset: &Preset) -> Vec<String> {
         }
     }
 
+    // 视觉辅助模型（--mmproj）
+    if let Some(p) = mmproj_path {
+        if !p.is_empty() {
+            args.push("--mmproj".into());
+            args.push(p.to_string());
+        }
+    }
+
     // 追加的原始参数
     for arg in &preset.custom_args {
         args.push(arg.clone());
@@ -153,7 +161,7 @@ mod tests {
     #[test]
     fn test_build_args_basic() {
         let preset = Preset::default_preset();
-        let args = build_args("/path/to/model.gguf", &preset);
+        let args = build_args("/path/to/model.gguf", &preset, None);
         assert!(args.contains(&"-m".to_string()));
         assert!(args.contains(&"/path/to/model.gguf".to_string()));
         assert!(args.contains(&"--host".to_string()));

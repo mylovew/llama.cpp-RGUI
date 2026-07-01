@@ -123,6 +123,13 @@ pub struct Preset {
     /// 额外环境变量
     #[serde(default)]
     pub extra_env: HashMap<String, String>,
+    // 多模态
+    /// 视觉辅助模型路径 (--mmproj)
+    /// - None: 自动检测模型所在目录
+    /// - Some(""): 禁用
+    /// - Some("/path"): 手动指定
+    #[serde(default)]
+    pub mmproj_path: Option<String>,
 }
 
 impl Preset {
@@ -150,6 +157,7 @@ impl Preset {
             chat_template: None,
             custom_args: Vec::new(),
             extra_env: HashMap::new(),
+            mmproj_path: None,
         }
     }
 }

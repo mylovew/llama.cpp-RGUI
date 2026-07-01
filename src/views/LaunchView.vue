@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -62,6 +62,7 @@ const serverStatus = ref<ServerStatus>({
 const logVisible = ref(false);
 const logs = ref<{ ts: number; level: string; line: string }[]>([]);
 const scanning = ref(false);
+const detectedMmproj = ref<string | null>(null);
 
 // 日志抽屉宽度响应式：大屏 600，小屏不超出窗口
 const logDrawerWidth = ref(600);
@@ -97,6 +98,9 @@ const modelStats = computed(() => {
     { label: "层数", value: m.meta?.block_count || "—" },
     { label: "大小", value: formatBytes(m.file_size_bytes) },
     { label: "参数", value: m.meta?.parameter_count ? formatParams(m.meta.parameter_count) : "—" },
+    ...(detectedMmproj.value
+      ? [{ label: "视觉辅助", value: extractMmprojName(detectedMmproj.value) }]
+      : []),
   ];
 });
 
@@ -114,6 +118,9 @@ const presetSummary = computed(() => {
     { label: "port", value: String(p.port) },
     { label: "threads", value: p.threads < 0 ? "自动" : String(p.threads) },
     { label: "fa", value: p.flash_attn },
+    ...(p.mmproj_path
+      ? [{ label: "mmproj", value: p.mmproj_path === "" ? "禁用" : extractMmprojName(p.mmproj_path) }]
+      : []),
   ];
 });
 
@@ -142,6 +149,24 @@ function formatParams(n: number): string {
   if (n >= 1e9) return (n / 1e9).toFixed(1) + "B";
   if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
   return String(n);
+}
+
+function extractMmprojName(path: string): string {
+  return path.split(/[\\/]/).pop() || path;
+}
+
+async function detectMmproj() {
+  if (!selectedModel.value) {
+    detectedMmproj.value = null;
+    return;
+  }
+  try {
+    detectedMmproj.value = await invoke<string | null>("find_mmproj", {
+      modelPath: selectedModel.value,
+    });
+  } catch {
+    detectedMmproj.value = null;
+  }
 }
 
 let unlistenLog: UnlistenFn | null = null;
@@ -177,6 +202,11 @@ async function scanModels() {
     scanning.value = false;
   }
 }
+
+// 模型切换时自动检测 mmproj
+watch(selectedModel, () => {
+  detectMmproj();
+});
 
 async function startServer() {
   if (!selectedModel.value || !currentPreset.value || !settings.config?.server_path) return;
@@ -238,6 +268,8 @@ onMounted(async () => {
   }
   // 扫描模型（内部会校验 selectedModel 是否存在）
   await scanModels();
+  // 初始检测 mmproj
+  await detectMmproj();
 
   // 日志抽屉宽度响应式
   updateDrawerWidth();

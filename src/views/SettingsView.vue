@@ -57,6 +57,16 @@ async function pickServer() {
   }
 }
 
+async function pickMmproj() {
+  if (!editingPreset.value) return;
+  const path = await invoke<string | null>("pick_file", {
+    filter: [{ name: "GGUF", extensions: ["gguf"] }],
+  });
+  if (path) {
+    editingPreset.value.mmproj_path = path;
+  }
+}
+
 async function detectVersion() {
   if (!serverPath.value) return;
   detecting.value = true;
@@ -222,6 +232,7 @@ function newPreset() {
     chat_template: null,
     custom_args: [],
     extra_env: {},
+    mmproj_path: null,
   };
   editingPreset.value = p;
 }
@@ -785,6 +796,24 @@ onMounted(() => {
                 </n-form-item>
                 <n-form-item label="聊天模板">
                   <n-input v-model:value="editingPreset.chat_template as any" type="textarea" :rows="2" placeholder="可选" />
+                </n-form-item>
+                <n-form-item label="多模态投影 (--mmproj)">
+                  <n-input-group>
+                    <n-input
+                      :value="editingPreset.mmproj_path ?? ''"
+                      placeholder="留空=自动检测（推荐）"
+                      @update:value="(v: string) => { if (editingPreset) editingPreset.mmproj_path = v || null; }"
+                    />
+                    <n-button size="small" @click="pickMmproj()">
+                      <template #icon>
+                        <n-icon :component="FolderIcon" />
+                      </template>
+                    </n-button>
+                  </n-input-group>
+                  <span class="form-hint">
+                    <template v-if="!editingPreset.mmproj_path || editingPreset.mmproj_path === ''">自动检测模型所在目录的 mmproj 文件</template>
+                    <template v-else>已手动指定路径</template>
+                  </span>
                 </n-form-item>
               </n-form>
               </div>
